@@ -1,0 +1,31 @@
+!/bin/bash
+
+#PBS -l select=1:ncpus=16:mem=32Gb:scratch_local=150gb
+#PBS -l walltime=48:00:00
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/plzen1/home/xeni_sunflower/Yevosek/10x_data"
+
+# copy own data into scratch directory
+cp $DATADIR/Sekvence.fastq/*gz $SCRATCHDIR || exit 1
+cp $DATADIR/Assembly/yevo_assembly_cont_fastq/outs/Truseq_PE_frankenstein.fa $SCRATCHDIR || exit 2
+cd $SCRATCHDIR || exit 3
+
+module add trimmomatic-0.39
+
+java -jar /software/trimmomatic/0.39/trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 15 -phred33 -trimlog trimlog_1.txt 32140_8_S1_L001_R1_001.fastq.gz 32140_8_S1_L001_R2_001.fastq.gz 32140_8_S1_L001_R1_001_trimmed_paired.fastq.gz 32140_8_S1_L001_R1_001_trimmed_unpaired.fastq.gz 32140_8_S1_L001_R2_001_trimmed_paired.fastq.gz 32140_8_S1_L001_R2_001_trimmed_unpaired.fastq.gz ILLUMINACLIP:Truseq_PE_frankenstein.fa:2:30:10:1:true SLIDINGWINDOW:5:20 CROP:135 HEADCROP:30 MINLEN:100
+java -jar /software/trimmomatic/0.39/trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 15 -phred33 -trimlog trimlog_2.txt 32140_8_S1_L002_R1_001.fastq.gz 32140_8_S1_L002_R2_001.fastq.gz 32140_8_S1_L002_R1_001_trimmed_paired.fastq.gz 32140_8_S1_L002_R1_001_trimmed_unpaired.fastq.gz 32140_8_S1_L002_R2_001_trimmed_paired.fastq.gz 32140_8_S1_L002_R2_001_trimmed_unpaired.fastq.gz ILLUMINACLIP:Truseq_PE_frankenstein.fa:2:30:10:1:true SLIDINGWINDOW:5:20 CROP:135 HEADCROP:30 MINLEN:100
+java -jar /software/trimmomatic/0.39/trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 15 -phred33 -trimlog trimlog_3.txt 32140_8_S1_L003_R1_001.fastq.gz 32140_8_S1_L003_R2_001.fastq.gz 32140_8_S1_L003_R1_001_trimmed_paired.fastq.gz 32140_8_S1_L003_R1_001_trimmed_unpaired.fastq.gz 32140_8_S1_L003_R2_001_trimmed_paired.fastq.gz 32140_8_S1_L003_R2_001_trimmed_unpaired.fastq.gz ILLUMINACLIP:Truseq_PE_frankenstein.fa:2:30:10:1:true SLIDINGWINDOW:5:20 CROP:135 HEADCROP:30 MINLEN:100
+java -jar /software/trimmomatic/0.39/trimmomatic-0.39/Trimmomatic-0.39/trimmomatic-0.39.jar PE -threads 15 -phred33 -trimlog trimlog_4.txt 32140_8_S1_L004_R1_001.fastq.gz 32140_8_S1_L004_R2_001.fastq.gz 32140_8_S1_L004_R1_001_trimmed_paired.fastq.gz 32140_8_S1_L004_R1_001_trimmed_unpaired.fastq.gz 32140_8_S1_L004_R2_001_trimmed_paired.fastq.gz 32140_8_S1_L004_R2_001_trimmed_unpaired.fastq.gz ILLUMINACLIP:Truseq_PE_frankenstein.fa:2:30:10:1:true SLIDINGWINDOW:5:20 CROP:135 HEADCROP:30 MINLEN:100
+rm *frankenstein.fa
+rm 32140_8_S1_L001_R1_001.fastq.gz
+rm 32140_8_S1_L002_R1_001.fastq.gz
+rm 32140_8_S1_L003_R1_001.fastq.gz
+rm 32140_8_S1_L004_R1_001.fastq.gz
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp -r *trim* $DATADIR || export CLEAN_SCRATCH=false
+
+
+

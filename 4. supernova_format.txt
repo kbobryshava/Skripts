@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#PBS -l select=1:ncpus=21:mem=800Gb:scratch_local=1000gb:cl_ursa=True
+#PBS -l walltime=24:00:00
+#PBS -q uv@cerit-pbs.cerit-sc.cz
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/plzen1/home/xeni_sunflower/Yevosek/yevo_assembly_250M_fastq/outs"
+
+# copy own data into scratch directory
+cp -r $DATADIR/assembly $SCRATCHDIR || exit 1
+
+cd $SCRATCHDIR || exit 2
+export TMPDIR=$SCRATCHDIR
+
+# add application modules necessary for computing , for example.:
+module add supernova-2.1.1
+supernova mkoutput --style=megabubbles --asmdir=./assembly --headers=full  --outprefix=out.250M
+
+
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp -r out* $DATADIR || export CLEAN_SCRATCH=false

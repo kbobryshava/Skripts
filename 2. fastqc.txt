@@ -1,0 +1,29 @@
+# !/bin/bash
+
+#PBS -l select=1:ncpus=2:mem=32Gb:scratch_local=200gb
+#PBS -l walltime=24:00:00
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/plzen1/home/xeni_sunflower/Yevosek"
+
+# copy own data into scratch directory
+cp $DATADIR/*fq $SCRATCHDIR || exit 1
+
+
+cd $SCRATCHDIR || exit 2
+
+
+#add modules
+module add fastQC-0.11.5
+
+fastqc *fq
+
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp *fastqc* $DATADIR/fastqc || export CLEAN_SCRATCH=false
+
+
+
+
+

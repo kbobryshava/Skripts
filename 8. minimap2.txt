@@ -1,0 +1,25 @@
+#!/bin/bash
+#PBS -l select=1:ncpus=4:mem=200Gb:scratch_local=200gb
+#PBS -l walltime=48:00:00
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+DATADIR="/storage/brno2/home/xeni_sunflower/10x_data/all_assemblies/minimap2"
+# copy own data into scratch directory
+cp $DATADIR/PlGr_genes.fasta $SCRATCHDIR || exit 1
+cp $DATADIR/PlGr_pd_contigs_seq.fasta $SCRATCHDIR || exit 1
+
+cd $SCRATCHDIR || exit 2
+# add application modules necessary for computing , for example.:
+module add samtools/samtools-1.11-intel-19.0.4-wzth4e4
+module add minimap-2.17
+
+#minimap2
+minimap2 -a -k9 -w5 --splice -g2k -G200k -A2 -B1 -O2,32 -E1,0 -C5 -z200 -ub --junc-bonus=9 --cap-sw-mem=0 --splice-flank=yes PlGr_pd_contigs_seq.fasta PlGr_genes.fasta > PlGr_pd_minimap2.sam
+
+for file in *.sam;
+do
+samtools view  -Sb -u  $file | samtools sort -o ${file/%.sam/_sort.bam};
+done
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp $SCRATCHDIR/*_sort.bam $DATADIR || export CLEAN_SCRATCH=false

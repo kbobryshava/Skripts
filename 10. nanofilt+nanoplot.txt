@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#PBS -l select=1:ncpus=9:mem=100Gb:scratch_local=400gb
+#PBS -l walltime=24:00:00
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/plzen1/home/$PBS_O_LOGNAME/Nanopore_data"
+
+# copy own data into scratch directory
+cp $DATADIR/out_fastq_reads/*.gz $SCRATCHDIR || exit 1
+cd $SCRATCHDIR || exit 2
+
+module add python36-modules-gcc
+
+for FILE in *.gz;
+do
+zcat $FILE >> pass.fastq
+done
+
+rm *.gz
+
+NanoFilt -l 26000 -q 15 pass.fastq > Q15filtr.fastq
+
+rm pass.fastq
+
+mkdir Nanoplotfiltr
+
+NanoPlot -t 8 -o NanoplotQ15 -p BAC --N50 --fastq Q15filtr.fastq
+
+gzip Q15filtr.fastq
+
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp -r Nano* /storage/plzen1/home/$PBS_O_LOGNAME/Nanopore_data/Nanoplot_raw || export CLEAN_SCRATCH=false
+cp *.gz /storage/plzen1/home/$PBS_O_LOGNAME/Nanopore_data/Nanoplot_raw || export CLEAN_SCRATCH=false1

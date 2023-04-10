@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -l walltime=24:0:0
+#PBS -l select=1:ncpus=10:mem=200gb:scratch_local=500gb
+DATADIR="/storage/plzen1/home/xeni_sunflower/Nanopore_data/Nanoplot_raw"
+cp $DATADIR/BACfiltr.fastq.gz $SCRATCHDIR || exit 1
+cd $SCRATCHDIR || exit 2
+# add application modules necessary for computing , for example.:
+module add flye-2.9
+gunzip BACfiltr.fastq.gz
+flye --nano-raw BACfiltr.fastq --out-dir Yevo_Gr_Q10_asm --genome-size 450k -m 2000 --meta -t 9;
+cp -r * $DATADIR || export CLEAN_SCRATCH=false

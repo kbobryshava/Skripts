@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -l select=1:ncpus=5:mem=150Gb:scratch_local=150gb
+#PBS -l walltime=14:00:00
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/plzen1/home/xeni_sunflower/Yevosek"
+
+# copy own data into scratch directory
+cp $DATADIR/*.cram $SCRATCHDIR || exit 1
+
+cd $SCRATCHDIR || exit 2
+module add samtools/samtools-1.11-intel-19.0.4-wzth4e4
+module add fastQC-0.11.5
+for FILE in *cram
+do
+samtools fastq -@4 -i -1 ${FILE/%.cram/_R1_001.fastq.gz} -2 ${FILE/%.cram/R2_001.fastq.gz}
+--i1 ${FILE/%.cram/I1_001.fastq.gz} --index-format n5i8 $FILE
+done
+
+
+fastqc *gz
+mkdir new10x 
+mv *fastq.gz new10x
+mv *fastqc* new10x
+
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp -r new10x $DATADIR/ || export CLEAN_SCRATCH=false
+
+
+
+
+
+

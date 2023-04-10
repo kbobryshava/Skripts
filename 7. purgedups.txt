@@ -1,0 +1,33 @@
+#!/bin/bash
+#PBS -N purge-dups
+#PBS -l select=1:ncpus=16:mem=64gb:scratch_local=250gb
+#PBS -l walltime=48:00:00
+
+
+trap 'clean_scratch' TERM EXIT
+
+cd ${SCRATCHDIR}
+
+scp /storage/brno2/home/xeni_sunflower/10x_data/upravy/32140_8_S1_L001-4_R1_001_trimmed_paired.fastq ${SCRATCHDIR}
+scp /storage/brno2/home/xeni_sunflower/10x_data/upravy/32140_8_S1_L001-4_R2_001_trimmed_paired.fastq ${SCRATCHDIR}
+scp /storage/brno2/home/xeni_sunflower//10x_data/all_assemblies/Yevo_assembly_10X_250M.fasta ${SCRATCHDIR}
+
+module add purge-dups-1.0.1
+
+bwa mem Yevo_assembly_10X_250M.fasta 32140_8_S1_L001-4_R1_001_trimmed_paired.fastq 32140_8_S1_L001-4_R2_001_trimmed_paired.fastq | samtools view -b -o - > $sr.bam
+
+ngscstat $sr.bam
+calcuts TX.stat > cutoffs 2>calcuts.log
+
+split_fa Yevo_assembly_10X_250M.fasta > Yevo_assembly_10X_250M.fasta.split
+minimap2 -xasm5 -DP Yevo_assembly_10X_250M.fasta.split Yevo_assembly_10X_250M.fasta.split | gzip -c - > Yevo_assembly_10X_250M.fasta.split.gz
+
+purge_dups -2 -T cutoffs -c TX.base.cov Yevo_assembly_10X_250M.fasta.split.gz > dups.bed 2> purge_dups.log
+
+get_seqs dups.bed Yevo_assembly_10X_250M.fasta
+
+rm ${SCRATCHDIR}/32140_8_S1_L001-4_R1_001_trimmed_paired.fastq
+rm ${SCRATCHDIR}/Yevo_assembly_10X_250M.fasta
+rm ${SCRATCHDIR}/32140_8_S1_L001-4_R2_001_trimmed_paired.fastq
+
+scp -r ${SCRATCHDIR}/* /storage/brno2/home/xeni_sunflower/10x_data/all_assemblies/purge-dups || export CLEAN_SCRATCH=true

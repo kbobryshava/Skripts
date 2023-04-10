@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -q gpu@meta-pbs.metacentrum.cz
+#PBS -l walltime=10:00:00
+#PBS -l select=1:ncpus=17:ngpus=1:mem=200gb:scratch_ssd=500gb
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+DATADIR="/storage/plzen1/home/xeni_sunflower/Nanopore_data"
+cp -r  $DATADIR/input $SCRATCHDIR
+cd $SCRATCHDIR || exit 2
+mkdir out_fastq_reads
+module add guppy-6.0.6-gpu
+guppy_basecaller -i input -r -s out_fastq_reads --flowcell FLO-MIN106 --kit SQK-LSK109 -x auto --gpu_runners_per__runner 2000 --trim_strategy none --calib_detect --compress_fastq --disable_qscore_filtering
+gunzip *.gz
+mkdir Nanoplot
+module add python36-modules-gcc
+NanoPlot -t 4 -o Nanoplot -p nanoplot --N50 --fastq *.fastq;
+NanoFilt -l 28000 -q 10 reads.fastq > Yevo_Gr_filtrQ10.fastq
+mkdir NanoplotfiltrQ10
+NanoPlot -t 8 -o NanoplotfiltrQ10  --N50 --fastq Yevo_Gr_filtrQ10.fastq
+gzip Yevo_Gr_filtrQ10.fastq
+cp -r ./out_fastq_reads $DATADIR
+cp -r Nano* $DATADIR
+cp Yevo_Gr_filtrQ10.fastq.gz $DATADIR || export CLEAN_SCRATCH=false

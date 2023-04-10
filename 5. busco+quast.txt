@@ -1,0 +1,36 @@
+#!/bin/bash
+
+#PBS -l select=1:ncpus=4:mem=500Gb:scratch_local=500gb
+#PBS -l walltime=72:00:00
+
+# cleaning of SCRATCH when error or job termination occur
+trap 'clean_scratch' TERM EXIT
+
+DATADIR="/storage/brno2/home/xeni_sunflower/10x_data/"
+
+# copy own data into scratch directory
+cp -r $DATADIR/*.fa $SCRATCHDIR || exit 1
+
+cd $SCRATCHDIR || exit 2
+
+# add application modules necessary for computing , for example.:
+module add busco-3.0.2
+mkdir $SCRATCHDIR/augustus_configs
+cp -r $AUGUSTUS_CONFIG_PATH/* $SCRATCHDIR/augustus_configs/
+export AUGUSTUS_CONFIG_PATH=$SCRATCHDIR/augustus_configs
+
+# respective execution of the computing
+mkdir busco
+run_BUSCO.py -i out.maxreads250M.fasta --out endopterygota -l /software/busco/3.0.2/src/db/endopterygota_odb9 -m geno -c 3
+
+run_BUSCO.py -i out.maxreads250M.fasta --out insecta -l /software/busco/3.0.2/src/db/insecta_odb9 -m geno -c 3
+cp -r run_* ./busco
+
+
+module add quast-4.6.3
+quast.py --min-contig 1000 -o ./quast/ -t 20  out.maxreads250M.fasta
+
+# copy resources from scratch directory back on disk field, if not successful, scratch is not deleted
+cp -r busco $DATADIR || export CLEAN_SCRATCH=false
+cp -r quast $DATADIR || export CLEAN_SCRATCH=false
+
